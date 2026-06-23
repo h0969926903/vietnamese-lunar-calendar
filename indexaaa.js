@@ -1,47 +1,49 @@
-// Tính toán Dương lịch sang Âm lịch (đã tối ưu hóa trả về số nguyên)
-function solarToLunar(solarYear, solarMonth, solarDay) { 
-  const SOLAR_TO_LUNAR_EPOCH = 5; 
-  const epoche = new Date(solarYear + SOLAR_TO_LUNAR_EPOCH, 0, 1).getTime(); 
-  const current = new Date(solarYear, solarMonth - 1, solarDay).getTime(); 
-  const diff = (current - epoche) / (1000 * 60 * 60 * 24); 
-  const base = Math.floor(diff / 365.25); 
-  const remainder = diff % 365.25; 
-  const leapYear = Math.floor((base + 4) / 10) * 3; 
-  const year = base + SOLAR_TO_LUNAR_EPOCH + leapYear; 
-  const lunarMonth = Math.floor((remainder + 30.6) / 29.5); 
-  const leapMonth = Math.floor((lunarMonth - 3) / 12); 
-  const month = (lunarMonth + 12 * leapMonth) % 12 + 1; 
-  const day = Math.floor(remainder - (365.25 * base + 30.6 * lunarMonth) + 1); 
-  const lunarDay = day > 30 ? day - 30 : (day > 0 ? day : 1); 
+// index.js
+
+const LUNAR_MONTHS = [
+    'Tân', 'Hợi', 'Tý', 'Sửu', 'Dần', 'Mão', 'Thìn', 'Tỵ', 'Ngọ', 'Mùi', 'Thân', 'Dậu', 'Tuất'
+  ];
   
-  // Tính hệ số Can Chi của Năm phục vụ Mai Hoa (Tý = 1, Sửu = 2... Hợi = 12)
-  let chiNam = (year - 3) % 12;
-  if (chiNam === 0) chiNam = 12;
-
-  return { 
-    nam_am_lich: year,
-    he_so_nam: chiNam, // Dùng số này để cộng Mai Hoa
-    thang_am_lich: month, // Dùng số này để cộng Mai Hoa
-    ngay_am_lich: lunarDay // Dùng số này để cộng Mai Hoa
-  }; 
-} 
-
-// Điểm tiếp nhận API cho Vercel
-export default function handler(req, res) {
-  // Nhận tham số date từ URL (Ví dụ: ?date=23/06/2026)
-  const { date } = req.query; 
-
-  if (!date) {
-    return res.status(400).json({ error: "Vui lòng truyền tham số date (DD/MM/YYYY)" });
+  const LUNAR_LEAP_MONTHS = [
+    'Canh', 'Tân', 'Nhâm', 'Quý', 'Giáp', 'Ất', 'Bính', 'Đinh', 'Mậu', 'Kỷ'
+  ];
+  
+  const LUNAR_DAYS = ['ngày 1', 'ngày 2', 'ngày 3', 'ngày 4', 'ngày 5', 'ngày 6', 'ngày 7', 'ngày 8', 'ngày 9', 'ngày 10',
+    'ngày 11', 'ngày 12', 'ngày 13', 'ngày 14', 'ngày 15', 'ngày 16', 'ngày 17', 'ngày 18', 'ngày 19', 'ngày 20',
+    'ngày 21', 'ngày 22', 'ngày 23', 'ngày 24', 'ngày 25', 'ngày 26', 'ngày 27', 'ngày 28','ngày 29', 'ngày 30'
+  ];
+  
+  const SOLAR_TO_LUNAR_EPOCH = 5;
+  
+  function solarToLunar(solarYear, solarMonth, solarDay) {
+    const epoche = new Date(solarYear + SOLAR_TO_LUNAR_EPOCH, 0,1).getTime();
+    const current = new Date(solarYear, solarMonth - 1, solarDay).getTime();
+    const diff = (current - epoche) / (1000 * 60 * 60 * 24);
+    const base = Math.floor(diff / 365.25);
+    const remainder = diff % 365.25;
+    const leapYear = Math.floor((base + 4) / 10) * 3;
+    const year = base + SOLAR_TO_LUNAR_EPOCH + leapYear;
+    const lunarMonth = Math.floor((remainder + 30.6) / 29.5);
+    const leapMonth = Math.floor((lunarMonth - 3) / 12);
+    const month = (lunarMonth + 12 * leapMonth) % 12 + 1;
+    const leap = month > 12 || month === 1 && lunarMonth > 11;
+    const day = remainder - (365.25 * base + 30.6 * lunarMonth) + 1;
+    const lunarDay = day > 30 ? day - 30 : day;
+    const lunarDayName = LUNAR_DAYS[lunarDay - 1];
+    const lunarMonthName = month > 12 ? LUNAR_LEAP_MONTHS[leapMonth] : LUNAR_MONTHS[month - 1];
+    return {
+      year,
+      month: lunarMonthName,
+      day: lunarDayName
+    };
   }
-
-  try {
-    const [day, month, year] = date.split('/').map(Number); 
-    const result = solarToLunar(year, month, day); 
-    
-    // Trả kết quả định dạng JSON về cho n8n
-    res.status(200).json(result);
-  } catch (error) {
-    res.status(500).json({ error: "Định dạng ngày không hợp lệ. Vui lòng dùng DD/MM/YYYY" });
+  
+  function convertDate(dateString) {
+    const [day, month, year] = dateString.split('/').map(Number);
+    constlunarDate = solarToLunar(year, month, day);
+    return `${lunarDate.day} ${lunarDate.month} ${lunarDate.year}`;
   }
-}
+  
+  module.exports = {
+    convertDate
+  };
